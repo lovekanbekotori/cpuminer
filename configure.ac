@@ -45,6 +45,7 @@ AC_CHECK_FUNCS([getopt_long])
 
 have_win32=false
 have_darwin=false
+have_linux=false
 PTHREAD_FLAGS="-pthread"
 WS2_LIBS=""
 
@@ -79,6 +80,10 @@ case $target in
     have_darwin=true
     PTHREAD_FLAGS=""
 	;;
+  *-*-linux-gnu)
+    have_linux=true
+    PTHREAD_FLAGS=""
+  ;;
   *-*-freebsd*)
     PTHREAD_FLAGS=""
     ;;
@@ -140,6 +145,22 @@ else
 	JANSSON_LIBS=-ljansson
 fi
 
+if test "x$have_darwin" = xtrue; then
+  OPENSSL_CPPFLAGS="-I/usr/local/Cellar/openssl@1.1/1.1.1g/include"
+  OPENSSL_LDFLAGS="-L/usr/local/Cellar/openssl@1.1/1.1.1g/lib"
+  OPENSSL_LIBS="-lssl -lcrypto"
+  AC_DEFINE([USE_OPENSSL], [1], [Define to 1 if OpenSSL should be used for SHAKE256 hashing.])
+elif test "x$have_linux" = xtrue; then
+  OPENSSL_CPPFLAGS="-I/usr/include"
+  OPENSSL_LDFLAGS="-L/usr/lib/x86_64-linux-gnu"
+  OPENSSL_LIBS="-lssl -lcrypto"
+  AC_DEFINE([USE_OPENSSL], [1], [Define to 1 if OpenSSL should be used for SHAKE256 hashing.])
+else
+  OPENSSL_CPPFLAGS=""
+  OPENSSL_LDFLAGS=""
+  OPENSSL_LIBS=""
+fi
+
 if test "x$have_win32" != xtrue; then
   PKG_CHECK_MODULES([LIBCURL], [libcurl >= 7.18.2], ,[AC_MSG_ERROR([Missing required libcurl dev >= 7.18.2])])
 
@@ -154,6 +175,9 @@ else
 fi
 
 AC_SUBST(JANSSON_LIBS)
+AC_SUBST(OPENSSL_CPPFLAGS)
+AC_SUBST(OPENSSL_LDFLAGS)
+AC_SUBST(OPENSSL_LIBS)
 AC_SUBST(LIBCURL_LIBS)
 AC_SUBST(LIBCURL_CPPFLAGS)
 AC_SUBST(PTHREAD_FLAGS)
@@ -169,10 +193,10 @@ AC_OUTPUT
 
 echo
 echo "Compilation............: make (or gmake)"
-echo "  CPPFLAGS.............: $CPPFLAGS"
+echo "  CPPFLAGS.............: $CPPFLAGS $OPENSSL_CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
-echo "  LDFLAGS..............: $LDFLAGS $PTHREAD_FLAGS"
-echo "  LDADD................: $LIBCURL_LIBS $JANSSON_LIBS $PTHREAD_LIBS $WS2_LIBS"
+echo "  LDFLAGS..............: $LDFLAGS $PTHREAD_FLAGS $OPENSSL_LDFLAGS"
+echo "  LDADD................: $LIBCURL_LIBS $OPENSSL_LIBS $JANSSON_LIBS $PTHREAD_LIBS $WS2_LIBS"
 echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix...............: $prefix"
